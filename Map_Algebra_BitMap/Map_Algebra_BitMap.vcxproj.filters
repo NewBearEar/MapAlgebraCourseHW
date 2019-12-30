@@ -36,6 +36,12 @@
     <ClInclude Include="Dist13Tmp.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="BitMap8bit.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="BitMap32bit.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -60,6 +66,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Dist13Tmp.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="BitMap8bit.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="BitMap32bit.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

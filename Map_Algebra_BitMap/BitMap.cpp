@@ -74,5 +74,10 @@ void BitMap::creatBmp32bitMtx()
 	}
 }
 
+BITMAPTYPE BitMap::getType()
+{
+	return BITMAPTYPE();
+}
+
 
 

@@ -152,6 +152,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="BitMap.h" />
+    <ClInclude Include="BitMap32bit.h" />
+    <ClInclude Include="BitMap8bit.h" />
     <ClInclude Include="Dist13Tmp.h" />
     <ClInclude Include="Dist5Tmp.h" />
     <ClInclude Include="DistanceTemplate.h" />
@@ -161,6 +163,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BitMap.cpp" />
+    <ClCompile Include="BitMap32bit.cpp" />
+    <ClCompile Include="BitMap8bit.cpp" />
     <ClCompile Include="Dist13Tmp.cpp" />
     <ClCompile Include="Dist5Tmp.cpp" />
     <ClCompile Include="DistanceTemplate.cpp" />

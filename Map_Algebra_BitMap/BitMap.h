@@ -3,6 +3,12 @@
 #include<string>
 #include<stdio.h>
 #include<Windows.h>
+
+typedef enum
+{
+	BIT8, BIT32
+}BITMAPTYPE;
+
 class BitMap
 {
 public:
@@ -23,5 +29,6 @@ public:
 	void creatBmp8bitMtx();
 	void creatBmp32bitMtx();
 	
+	virtual BITMAPTYPE getType();
 };
 

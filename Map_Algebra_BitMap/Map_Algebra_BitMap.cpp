@@ -8,10 +8,94 @@
 #include"MA.h"
 
 using namespace std;
+//反色，叠置，均值平滑,8位图转32位,8位图距离变换（带障碍）,v图边界,缓冲区，内距变换(中轴),Delauney三角网
+typedef enum
+{
+	BMPREVERSE,BMPOVERLAY,MEANSMOOTH,BMP8BIT_TO_32BIT,BMP8BIT_DISTTRANS,VORONOIBOUND, BUFFER
+}MA_ALGORITHM;
 int main()
 {
     cout << "Hello World!\n"; 	
-	stringstream sstr;  //字符串流，可用于char*到string
+
+	//选择算法
+	cout << "请选择算法" << endl;
+	cout << "0-反色运算" << endl << "1-叠置运算" << endl << "2-均值平滑" << endl << "3-8位转32位" << endl;
+	cout << "4-8位图距离变换" << endl << "5-V图边界提取" << endl << "6-缓冲区" << endl;
+	char * InputBmpName1 = new char[1024];
+	char * InputBmpName2 = new char[1024];
+	char * OutputBmpName1 = new char[1024];
+	char * OutputBmpName2 = new char[1024];
+	//测试障碍距离变换
+		//DistanceTemplate* distemp = new Dist5Tmp();  //5×5模板
+		//DistanceTemplate* distemp = new DistOctTmp();//八边形模板
+	DistanceTemplate* distemp = new Dist13Tmp();//13×13模板
+
+	int algorChoose = -1;
+	cin >> algorChoose; //输入
+	switch (algorChoose)
+	{
+	case BMPREVERSE:
+		cout << "源文件的路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		BmpReverse(InputBmpName1, OutputBmpName1); //调用反色函数
+		break;
+	case BMPOVERLAY:
+		cout << "待叠加的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "叠加的文件路径：" << endl;
+		cin >> InputBmpName2;
+		cout << "输出文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		BmpOverlay(InputBmpName1, InputBmpName2, OutputBmpName1); //调用叠加函数
+		break;
+	case MEANSMOOTH:
+		cout << "待平滑的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		mean33Smooth(InputBmpName1, OutputBmpName1); //调用平滑
+		break;
+	case BMP8BIT_TO_32BIT:
+		cout << "待转换的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		Bmp8bitTo32bit(InputBmpName1, OutputBmpName1); //调用8位转32位
+		break;
+	case BMP8BIT_DISTTRANS:
+		
+		cout << "待平滑的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出距离场文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		cout << "输出分配场文件的路径：" << endl;
+		cin >> OutputBmpName2;
+		Bmp8BitDistTrans(InputBmpName1, OutputBmpName1, OutputBmpName2, distemp); //调用距离变换
+		break;
+	case VORONOIBOUND:
+		cout << "分配场的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		getVoronoiBoundary(InputBmpName1, OutputBmpName1); //获取v图
+		break;
+
+	case BUFFER:
+		cout << "距离场的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		getBufferFromDis(10, InputBmpName1, OutputBmpName1);//缓冲区
+		break;
+	default:
+		break;
+	}
+
+
+	/*
+	stringstream sstr;  //字符串流，可用于char*到string ，也可用string的data（）方法
 	sstr.clear();
 	//输入
 	char * InputBmpName = new char[1024];
@@ -26,7 +110,7 @@ int main()
 	sstr >> InputBmpName2;
 
 	char * InputBmpName3 = new char[1024];
-	string sInputBmpName3 = "E:\\学习\\地图代数实验2\\distTransInput.bmp";
+	string sInputBmpName3 = "E:\\学习\\地图代数实验3\\distTranBarrier3.bmp";
 	sstr.clear();	//多次类型转换前需要clear(),包含数据流时不可被赋值
 	sstr << sInputBmpName3;
 	sstr >> InputBmpName3;
@@ -43,6 +127,8 @@ int main()
 	sstr.clear();	//多次类型转换前需要clear(),包含数据流时不可被赋值
 	sstr << sInputBmpName5;
 	sstr >> InputBmpName5;
+	*/
+	
 	//输出反色
 	/*
 	char * OutputBmpName = new char[1024];
@@ -74,15 +160,15 @@ int main()
 	*/
 
 	/*
-	//测试距离变换
-	//DistanceTemplate* distemp = new Dist5Tmp();  //5×5模板
-	DistanceTemplate* distemp = new DistOctTmp();//八边形模板
+	//测试障碍距离变换
+	DistanceTemplate* distemp = new Dist5Tmp();  //5×5模板
+	//DistanceTemplate* distemp = new DistOctTmp();//八边形模板
 	char * OutputBmpName4 = new char[1024];
-	string sOutputBmpName4 = "E:\\学习\\地图代数实验3\\distTransOctangonDistribute.bmp";
+	string sOutputBmpName4 = "E:\\学习\\地图代数实验3\\distTranBarrierDistMtxDest3.bmp";
 	sstr.clear();	//多次类型转换前需要clear(),包含数据流时不可被赋值
 	sstr << sOutputBmpName4;
 	sstr >> OutputBmpName4;
-	Bmp8BitDistTrans(InputBmpName3, OutputBmpName4,distemp); //调用距离变换
+	Bmp8BitDistTrans(InputBmpName3, OutputBmpName4,OutputBmpName4,distemp); //调用距离变换
 	*/
 	/*
 	char * OutputBmpName5 = new char[1024];
@@ -92,12 +178,14 @@ int main()
 	sstr >> OutputBmpName5;
 	getVoronoiBoundary(InputBmpName4,OutputBmpName5);
 	*/
+	/*
 	char * OutputBmpName6 = new char[1024];
 	string sOutputBmpName6 = "E:\\学习\\地图代数实验3\\Buffer.bmp";
 	sstr.clear();	//多次类型转换前需要clear(),包含数据流时不可被赋值
 	sstr << sOutputBmpName6;
 	sstr >> OutputBmpName6;
 	getBufferFromDis(10,InputBmpName5, OutputBmpName6);
+	*/
 
 	//cout << InputBmpName << endl;
 
@@ -115,6 +203,7 @@ int main()
 	*/
 
 }
+
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
 // 调试程序: F5 或调试 >“开始调试”菜单
