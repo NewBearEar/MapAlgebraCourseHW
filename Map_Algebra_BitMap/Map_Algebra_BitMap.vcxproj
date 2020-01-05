@@ -154,23 +154,27 @@
     <ClInclude Include="BitMap.h" />
     <ClInclude Include="BitMap32bit.h" />
     <ClInclude Include="BitMap8bit.h" />
+    <ClInclude Include="DDALine.h" />
     <ClInclude Include="Dist13Tmp.h" />
     <ClInclude Include="Dist5Tmp.h" />
     <ClInclude Include="DistanceTemplate.h" />
     <ClInclude Include="DistOctTmp.h" />
     <ClInclude Include="MA.h" />
+    <ClInclude Include="MyPoint.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BitMap.cpp" />
     <ClCompile Include="BitMap32bit.cpp" />
     <ClCompile Include="BitMap8bit.cpp" />
+    <ClCompile Include="DDALine.cpp" />
     <ClCompile Include="Dist13Tmp.cpp" />
     <ClCompile Include="Dist5Tmp.cpp" />
     <ClCompile Include="DistanceTemplate.cpp" />
     <ClCompile Include="DistOctTmp.cpp" />
     <ClCompile Include="MA.cpp" />
     <ClCompile Include="Map_Algebra_BitMap.cpp" />
+    <ClCompile Include="MyPoint.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

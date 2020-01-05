@@ -337,7 +337,7 @@ int mean33Smooth(const char* InBmpName, const char*OutBmpName)
 	bmpmean.MtxWidth = bmp.MtxWidth; //4个一组，不足补全
 	bmpmean.MtxHeight = bmp.MtxHeight;
 	bmpmean.creatBmp8bitMtx();
-	for (int i = 0; i < bmp.BmpHeight; i++)
+	for (int i = 0; i < 1024; i++)
 	{
 		bmpmean.ClrTab[i] = bmp.ClrTab[i];
 	}
@@ -352,8 +352,8 @@ int mean33Smooth(const char* InBmpName, const char*OutBmpName)
 			{
 				for (int m = 0; m < 3; m++)
 				{
-					int CX = j + m;
-					int CY = i + k;  //偏移量和循环变量决定了模板情况
+					int CX = j + (m - 1);
+					int CY = i + (k - 1);  //偏移量和循环变量决定了模板情况
 					//检验位置的合法性
 					if ((CY < 0) || (CY > bmp.BmpHeight - 1)) continue;
 					if ((CX < 0) || (CX > bmp.BmpWidth - 1))continue;
@@ -362,7 +362,7 @@ int mean33Smooth(const char* InBmpName, const char*OutBmpName)
 					smoothCount++;
 				}
 			}
-			bmpmean.BmpMtx[i][j] = int(total/smoothCount);
+			bmpmean.BmpMtx[i][j] = unsigned char(floor(total/smoothCount));
 		}
 	}
 
@@ -413,6 +413,14 @@ int Bmp8BitDistTrans(const char*InBmpName, const char*OutDistBmp, const char*Out
 	bmp.MtxWidth = (bmp.BmpWidth + 3) / 4 * 4; //4个一组，不足补全
 	bmp.MtxHeight = bmp.BmpHeight;
 	bmp.creatBmp8bitMtx();
+
+	bmp2.bmpHead = bmp.bmpHead;
+	bmp2.bmpInfo = bmp.bmpInfo;
+	for (int i = 0; i < 1024; i++)
+	{
+		bmp2.ClrTab[i] = bmp.ClrTab[i];
+	}
+
 	//1.分配场和距离场空间的建立与分配
 	unsigned char** LocMtx = NULL;
 	LocMtx = new unsigned char*[bmp.MtxHeight];
@@ -539,18 +547,21 @@ int Bmp8BitDistTrans(const char*InBmpName, const char*OutDistBmp, const char*Out
 		printf("Output file is not found!");
 		return -1;
 	}
-	bmp.bmpHead.bfOffBits = 54;
-	bmp.bmpHead.bfSize = sizeof(unsigned int)*(bmp.BmpHeight*bmp.BmpWidth) + 54;
-	bmp.bmpInfo.biBitCount = 32;
-	fwrite(&(bmp.bmpHead), sizeof(BITMAPFILEHEADER), 1, filew);
-	fwrite(&(bmp.bmpInfo), sizeof(BITMAPINFOHEADER), 1, filew);
+	BitMap bmp32;
+	bmp32.bmpHead = bmp.bmpHead;
+	bmp32.bmpInfo = bmp.bmpInfo;
+	bmp32.bmpHead.bfOffBits = 54;
+	bmp32.bmpHead.bfSize = sizeof(float)*(bmp.BmpHeight*bmp.BmpWidth) + 54;
+	bmp32.bmpInfo.biBitCount = 32;
+	fwrite(&(bmp32.bmpHead), sizeof(BITMAPFILEHEADER), 1, filew);
+	fwrite(&(bmp32.bmpInfo), sizeof(BITMAPINFOHEADER), 1, filew);
 	
 	//用距离矩阵写入位图,float和int位数相同时
 	for (int i = 0; i < bmp.MtxHeight; i++)
 	{
-		fwrite(DistMtx[i], sizeof(unsigned int), bmp.BmpWidth, filew);//不必补齐,int已经是4的倍数
+		fwrite(DistMtx[i], sizeof(float), bmp.BmpWidth, filew);//不必补齐,int已经是4的倍数
 	}
-	
+	fclose(filew);
 	
 	
 	//尝试输出分配矩阵，8位矩阵
@@ -561,12 +572,7 @@ int Bmp8BitDistTrans(const char*InBmpName, const char*OutDistBmp, const char*Out
 		printf("Output file is not found!");
 		return -1;
 	}
-	bmp2.bmpHead = bmp.bmpHead;
-	bmp2.bmpInfo = bmp.bmpInfo;
-	for (int i = 0; i < 1024; i++)
-	{
-		bmp2.ClrTab[i] = bmp.ClrTab[i];
-	}
+
 	fwrite(&(bmp2.bmpHead), sizeof(BITMAPFILEHEADER), 1, filew);
 	fwrite(&(bmp2.bmpInfo), sizeof(BITMAPINFOHEADER), 1, filew);
 	fwrite(&(bmp2.ClrTab), sizeof(unsigned int), 256, filew);
@@ -714,11 +720,12 @@ int getBufferFromDis(float bufferWidth, const char * InBmpName, const char * Out
 	bmp32.MtxWidth = bmp32.BmpWidth; 
 	bmp32.MtxHeight = bmp32.BmpHeight;
 	bmp32.creatBmp32bitMtx();
-	unsigned int * lineBuf = new unsigned int[bmp32.MtxWidth];  //行缓存
+	//注意分配场为float
+	float * lineBuf = new float[bmp32.MtxWidth];  //行缓存
 
 	for (int i = 0; i < bmp32.MtxHeight; i++)
 	{
-		fread(lineBuf, sizeof(unsigned int), bmp32.MtxWidth, file);
+		fread(lineBuf, sizeof(float), bmp32.MtxWidth, file);
 		for (int j = 0; j < bmp32.MtxWidth; j++)
 		{
 			bmp32.Bmp32Mtx[i][j] = lineBuf[j];
@@ -727,23 +734,28 @@ int getBufferFromDis(float bufferWidth, const char * InBmpName, const char * Out
 
 	//缓冲区矩阵
 	unsigned int** bufferMtx = NULL;
+	unsigned int** tmpBufferMtx = NULL;
 	bufferMtx = new unsigned int*[bmp32.MtxHeight];
+	tmpBufferMtx = new unsigned int*[bmp32.MtxHeight];
 	for (int i = 0; i < bmp32.MtxHeight; i++)
 	{
 		bufferMtx[i] = new unsigned int[bmp32.MtxWidth];
+		tmpBufferMtx[i] = new unsigned int[bmp32.MtxWidth];
 	}
 	//缓冲区运算
 	for (int i = 0; i < bmp32.MtxHeight; i++)
 	{
 		for (int j = 0; j < bmp32.MtxWidth; j++)
 		{
-			if (bmp32.Bmp32Mtx[i][j] <= bufferWidth)
+			if (bmp32.Bmp32Mtx[i][j] < bufferWidth)
 			{
-				bufferMtx[i][j] = 0xfff;
+				/*if (bmp32.Bmp32Mtx[i][j] != 0)
+					cout << "?";   *///????????
+				bufferMtx[i][j] = 0;
 			}
 			else
 			{
-				bufferMtx[i][j] = 0xffffff;
+				bufferMtx[i][j] = 0xffffffff;
 			}
 		}
 	}
@@ -761,14 +773,16 @@ int getBufferFromDis(float bufferWidth, const char * InBmpName, const char * Out
 			//检验位置的合法性
 			if ((CYT < 0) || (CYD > bmp32.BmpHeight - 1)) continue;
 			if ((CXL < 0) || (CXR > bmp32.BmpWidth - 1))continue;
-			if (bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[CYT][j] && bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[CYD][j]
-				&& bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[i][CXR] && bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[i][CXL])
+			//if (bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[CYT][j] && bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[CYD][j]
+			//	&& bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[i][CXR] && bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[i][CXL])
+			if (bufferMtx[i][j] == bufferMtx[CYT][j] && bufferMtx[i][j] == bufferMtx[CYD][j]
+				&& bufferMtx[i][j] == bufferMtx[i][CXR] && bufferMtx[i][j] == bufferMtx[i][CXL])
 			{
-				bufferMtx[i][j] = 0xffffff;
+				tmpBufferMtx[i][j] = 0xffffffff;
 			}
 			else
 			{
-				bufferMtx[i][j] = bufferMtx[i][j];
+				tmpBufferMtx[i][j] = bufferMtx[i][j];
 			}
 
 		}
@@ -792,8 +806,762 @@ int getBufferFromDis(float bufferWidth, const char * InBmpName, const char * Out
 	//用距离矩阵写入位图,float和int位数相同时
 	for (int i = 0; i < bmp32.MtxHeight; i++)
 	{
-		fwrite(bufferMtx[i], sizeof(unsigned int), bmp32.BmpWidth, filew);//不必补齐,int已经是4的倍数
+		fwrite(tmpBufferMtx[i], sizeof(unsigned int), bmp32.BmpWidth, filew);//不必补齐,int已经是4的倍数
 	}
+	//清理扫尾,类析构自动清除
+	fclose(filew);
+	fclose(file);
+	delete[] lineBuf;
+	lineBuf = NULL;
+	for (int i = 0; i < bmp32.BmpHeight; i++)
+	{
+		delete[] bufferMtx[i];
+		bufferMtx[i] = NULL;
+	}
+	return 0;
+
+}
+
+int getDelauney(const char * InBmpName, const char*OutLocBmp, const char*OutVoronoiBmp, const char * OutDelauneyBmp, DistanceTemplate * pdisTmp)
+{
+	BitMap bmp, bmp2, bmploc;
+	FILE* file;
+	errno_t err;
+	err = fopen_s(&file, InBmpName, "rb");
+	if (file == NULL)
+	{
+		printf("Input file is not found!");
+		return -1;
+	}
+	//数据读取
+	fread(&(bmp.bmpHead), sizeof(BITMAPFILEHEADER), 1, file);
+	fread(&(bmp.bmpInfo), sizeof(BITMAPINFOHEADER), 1, file);
+	fread(bmp.ClrTab, sizeof(unsigned int), 256, file);
+	bmp.BmpWidth = bmp.bmpInfo.biWidth;
+	bmp.BmpHeight = bmp.bmpInfo.biHeight;
+	bmp.MtxWidth = (bmp.BmpWidth + 3) / 4 * 4; //4个一组，不足补全
+	bmp.MtxHeight = bmp.BmpHeight;
+	bmp.creatBmp8bitMtx();
+
+	bmp2.bmpHead = bmp.bmpHead;
+	bmp2.bmpInfo = bmp.bmpInfo;
+	for (int i = 0; i < 1024; i++)
+	{
+		bmp2.ClrTab[i] = bmp.ClrTab[i];
+	}
+	bmp2.BmpWidth = bmp.BmpWidth;
+	bmp2.BmpHeight = bmp.BmpHeight;
+	bmp2.MtxWidth = bmp.MtxWidth; //4个一组，不足补全
+	bmp2.MtxHeight = bmp.MtxHeight;
+	bmp2.creatBmp8bitMtx();
+	//1.分配场和距离场空间的建立与分配
+	unsigned char** LocMtx = NULL;
+	LocMtx = new unsigned char*[bmp.MtxHeight];
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		LocMtx[i] = new unsigned char[bmp.MtxWidth];
+	}
+	float** DistMtx = NULL;
+	DistMtx = new float*[bmp.MtxHeight];
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		DistMtx[i] = new float[bmp.MtxWidth];
+	}
+	vector<MyPoint> sourcePoint; //记录所有点
+	vector<pair<MyPoint, MyPoint>> delauneyVertexs;  //记录三角网顶点对
+	MyPoint tmpPt1, tmpPt2;
+	//2.读取位图数据并复制到分配场
+	unsigned char* lineBuf = new unsigned char[bmp.MtxWidth];  //行缓存
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		fread(lineBuf, sizeof(unsigned char), bmp.MtxWidth, file);
+		for (int j = 0; j < bmp.MtxWidth; j++)
+		{
+			bmp.BmpMtx[i][j] = lineBuf[j];
+			LocMtx[i][j] = lineBuf[j];
+			if (lineBuf[j] != 255)
+			{
+				tmpPt1.x = j;
+				tmpPt1.y = i;
+				tmpPt1.loc = lineBuf[j];
+				sourcePoint.push_back(tmpPt1);
+			}
+		}
+	}
+	fclose(file);
+
+	//3.根据分配场初始化距离场矩阵
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		for (int j = 0; j < bmp.MtxWidth; j++)
+		{
+			if (LocMtx[i][j] == 0xff) DistMtx[i][j] = Float_MAX;
+			//加入障碍部分，为黑色
+			else if (LocMtx[i][j] == 0x00) DistMtx[i][j] = Float_BARRIER;
+			else
+			{
+				DistMtx[i][j] = 0;
+			}
+		}
+	}
+	//4.根据模板扫描计算
+
+	//First 左下->右上扫描  //所谓左下->右上，不只是改变了模板，其遍历顺序也影响具体结果值!!!
+	for (int i = bmp.BmpHeight - 1; i >= 0; i--)
+	{
+		for (int j = 0; j < bmp.BmpWidth; j++)
+		{
+			if (fabs(DistMtx[i][j]) < Float_MIN) continue;
+			//加入障碍部分，为黑色
+			if (fabs(fabs(DistMtx[i][j] - Float_BARRIER)) < Float_MIN) continue;
+			float dismin = Float_MAX;  //初始化最小距离
+			int locx = j;
+			int	locy = i;
+			for (int k = 0; k < pdisTmp->GetSize() / 2 + 1; k++)
+			{
+
+				int offx = pdisTmp->GetOffX(k);
+				int offy = pdisTmp->GetOffY(k);  //offy为负值
+
+				float templateDis = pdisTmp->GetDist(k);
+				//计算距离矩阵的偏移
+				int CX = j + offx;
+				int CY = i - offy;  //偏移量和循环变量决定了模板情况
+				//检验位置的合法性
+				if ((CY < 0) || (CY > bmp.BmpHeight - 1)) continue;
+				if ((CX < 0) || (CX > bmp.BmpWidth - 1))continue;
+				if (fabs((fabs(DistMtx[CY][CX]) - Float_MAX)) < Float_MIN)continue;//跳过无穷大的距离矩阵值的计算，加快速度；
+				if (fabs(fabs(templateDis - Float_MAX)) < Float_MIN)continue;//跳过模板无穷大的部分
+				if (fabs((fabs(DistMtx[CY][CX]) - Float_BARRIER)) < Float_MIN)continue;//跳过障碍计算
+				//计算距离最小值
+				if ((DistMtx[CY][CX] + templateDis) < dismin)
+				{
+					dismin = DistMtx[CY][CX] + templateDis;
+					locx = CX;
+					locy = CY;
+				}
+			}
+			DistMtx[i][j] = dismin;	//得出的最小距离赋值给模板中心位置
+			LocMtx[i][j] = LocMtx[locy][locx];	//将最近的目标Loc值作为模板中心位置Loc值
+		}
+	}
+
+	//Second 扫描
+	for (int i = 0; i < bmp.BmpHeight; i++)
+	{
+		for (int j = bmp.BmpWidth - 1; j >= 0; j--)
+		{
+			if (fabs(DistMtx[i][j]) < Float_MIN) continue;
+			//加入障碍部分，为黑色
+			if (fabs(fabs(DistMtx[i][j] - Float_BARRIER)) < Float_MIN) continue;
+			float dismin = Float_MAX;
+			for (int k = pdisTmp->GetSize() / 2; k < pdisTmp->GetSize(); k++)
+			{
+				int offx = pdisTmp->GetOffX(k);
+				int offy = pdisTmp->GetOffY(k);  //offy为正值
+				float templateDis = pdisTmp->GetDist(k);
+				//计算距离矩阵的偏移
+				int CX = j + offx;
+				int CY = i - offy;  //注意,偏移量和循环变量决定了模板情况
+				//检验位置的合法性
+				if ((CY < 0) || (CY > bmp.BmpHeight - 1)) continue;
+				if ((CX < 0) || (CX > bmp.BmpWidth - 1))continue;
+				if (fabs((fabs(DistMtx[CY][CX]) - Float_MAX)) < Float_MIN)continue;//跳过无穷大的距离矩阵值的计算，加快速度；
+				if (fabs(fabs(templateDis - Float_MAX)) < Float_MIN)continue;//跳过模板无穷大的部分
+				if (fabs((fabs(DistMtx[CY][CX]) - Float_BARRIER)) < Float_MIN)continue;//跳过障碍计算
+
+				//计算距离最小值
+				if ((DistMtx[CY][CX] + templateDis) < dismin)
+				{
+					dismin = DistMtx[CY][CX] + templateDis;
+					LocMtx[i][j] = LocMtx[CY][CX];	//将最近的目标Loc值作为模板中心位置Loc值
+					bmp2.BmpMtx[i][j] = LocMtx[i][j];
+				}
+			}
+			DistMtx[i][j] = dismin;	//得出的最小距离赋值给模板中心位置
+
+		}
+	}
+
+	//尝试输出分配矩阵，8位矩阵
+	FILE * filew;
+	fopen_s(&filew, OutLocBmp, "wb");
+	if (filew == NULL)
+	{
+		printf("Output file is not found!");
+		return -1;
+	}
+
+	fwrite(&(bmp2.bmpHead), sizeof(BITMAPFILEHEADER), 1, filew);
+	fwrite(&(bmp2.bmpInfo), sizeof(BITMAPINFOHEADER), 1, filew);
+	fwrite(&(bmp2.ClrTab), sizeof(unsigned int), 256, filew);
+
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		fwrite(LocMtx[i], sizeof(unsigned char), bmp.MtxWidth, filew);//8位图补齐4倍数
+	}
+
+	//**********************************************/
+	//边界矩阵
+	unsigned char** boundMtx = NULL;
+	boundMtx = new unsigned char*[bmp2.MtxHeight];
+	for (int i = 0; i < bmp2.MtxHeight; i++)
+	{
+		boundMtx[i] = new unsigned char[bmp2.MtxWidth];
+	}
+	//分配场边界提取运算
+	for (int i = 0; i < bmp2.MtxHeight; i++)
+	{
+		for (int j = 0; j < bmp2.MtxWidth; j++)
+		{
+			//四个位置
+			int CXL = j - 1;  //左边
+			int CXR = j + 1;  //右
+			int CYD = i + 1;  //下
+			int CYT = i - 1;  //上
+			//检验位置的合法性
+			if ((CYT < 0) || (CYD > bmp2.BmpHeight - 1)) continue;
+			if ((CXL < 0) || (CXR > bmp2.BmpWidth - 1))continue;
+			if (bmp2.BmpMtx[i][j] == bmp2.BmpMtx[CYT][j] && bmp2.BmpMtx[i][j] == bmp2.BmpMtx[CYD][j]
+				&& bmp2.BmpMtx[i][j] == bmp2.BmpMtx[i][CXR] && bmp2.BmpMtx[i][j] == bmp2.BmpMtx[i][CXL])
+			{
+				boundMtx[i][j] = 0xff;
+			}
+			else
+			{
+				boundMtx[i][j] = bmp2.BmpMtx[i][j];
+				//记录顶点对
+				if (bmp2.BmpMtx[i][j] != bmp2.BmpMtx[CYT][j])
+				{
+					vector<MyPoint>::iterator iter = sourcePoint.begin();
+					for (; iter != sourcePoint.end(); iter++)
+					{
+						if (bmp2.BmpMtx[i][j] == iter->loc)
+						{
+							tmpPt1 = *iter;
+						}
+						if (bmp2.BmpMtx[CYT][j] == iter->loc)
+						{
+							tmpPt2 = *iter;
+						}
+					}
+					delauneyVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
+				}
+				else if (bmp2.BmpMtx[i][j] != bmp2.BmpMtx[CYD][j])
+				{
+					vector<MyPoint>::iterator iter = sourcePoint.begin();
+					for (; iter != sourcePoint.end(); iter++)
+					{
+						if (bmp2.BmpMtx[i][j] == iter->loc)
+						{
+							tmpPt1 = *iter;
+						}
+						if (bmp2.BmpMtx[CYD][j] == iter->loc)
+						{
+							tmpPt2 = *iter;
+						}
+					}
+					delauneyVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
+				}
+				else if (bmp2.BmpMtx[i][j] != bmp2.BmpMtx[i][CXR])
+				{
+					vector<MyPoint>::iterator iter = sourcePoint.begin();
+					for (; iter != sourcePoint.end(); iter++)
+					{
+						if (bmp2.BmpMtx[i][j] == iter->loc)
+						{
+							tmpPt1 = *iter;
+						}
+						if (bmp2.BmpMtx[i][CXR] == iter->loc)
+						{
+							tmpPt2 = *iter;
+						}
+					}
+					delauneyVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
+				}
+				else if(bmp2.BmpMtx[i][j] != bmp2.BmpMtx[i][CXL])
+				{
+					vector<MyPoint>::iterator iter = sourcePoint.begin();
+					for (; iter != sourcePoint.end(); iter++)
+					{
+						if (bmp2.BmpMtx[i][j] == iter->loc)
+						{
+							tmpPt1 = *iter;
+						}
+						if (bmp2.BmpMtx[i][CXL] == iter->loc)
+						{
+							tmpPt2 = *iter;
+						}
+					}
+					delauneyVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
+				}
+			}
+
+		}
+	}
+
+
+	//创建位图
+	filew;
+	//errno_t err;
+	//err = 
+	err = fopen_s(&filew, OutVoronoiBmp, "wb");
+	if (filew == NULL)
+	{
+		printf("Output file is not found!");
+		return -1;
+	}
+	fwrite(&(bmp2.bmpHead), sizeof(BITMAPFILEHEADER), 1, filew);
+	fwrite(&(bmp2.bmpInfo), sizeof(BITMAPINFOHEADER), 1, filew);
+	fwrite(bmp2.ClrTab, 1024, 1, filew);
+	//写入位图
+	for (int i = 0; i < bmp2.MtxHeight; i++)
+	{
+		fwrite(boundMtx[i], sizeof(unsigned char), bmp2.MtxWidth, filew);
+	}
+
+	//*******************************************/
+
+	//绘制三角网
+	vector<pair<MyPoint, MyPoint>>::iterator iter = delauneyVertexs.begin();
+	for (; iter != delauneyVertexs.end(); iter++)
+	{
+		DDALine dda(&(iter->first), &(iter->second));
+		dda.draw(boundMtx);
+	}
+
+	//创建位图
+	filew;
+	//errno_t err;
+	//err = 
+	err = fopen_s(&filew, OutDelauneyBmp, "wb");
+	if (filew == NULL)
+	{
+		printf("Output file is not found!");
+		return -1;
+	}
+	fwrite(&(bmp2.bmpHead), sizeof(BITMAPFILEHEADER), 1, filew);
+	fwrite(&(bmp2.bmpInfo), sizeof(BITMAPINFOHEADER), 1, filew);
+	fwrite(bmp2.ClrTab, 1024, 1, filew);
+	//写入位图
+	for (int i = 0; i < bmp2.MtxHeight; i++)
+	{
+		fwrite(boundMtx[i], sizeof(unsigned char), bmp2.MtxWidth, filew);
+	}
+
+	//扫尾清理
+	fclose(filew);
+	delete[] lineBuf;
+	lineBuf = NULL;
+	for (int i = 0; i < bmp.BmpHeight; i++)
+	{
+		delete[] LocMtx[i];
+		LocMtx[i] = NULL;
+		delete[] DistMtx[i];
+		DistMtx[i] = NULL;
+	}
+	delete[] LocMtx;
+	LocMtx = NULL;
+	delete[] DistMtx;
+	DistMtx = NULL;
+
+	return 0;
+}
+
+int getBufferSetBlack(float bufferWidth, const char * InBmpName, const char * InLocBmpName, const char * OutBmpName)
+{
+	//获取缓冲区并将外部设置为黑色
+	BitMap bmp32,bmp,tmp8Bmp;
+	FILE* file;
+	errno_t err;
+	err = fopen_s(&file, InBmpName, "rb");
+	if (file == NULL)
+	{
+		printf("Input file is not found!");
+		return -1;
+	}
+	//数据读取
+	fread(&(bmp32.bmpHead), sizeof(BITMAPFILEHEADER), 1, file);
+	fread(&(bmp32.bmpInfo), sizeof(BITMAPINFOHEADER), 1, file);
+
+	bmp32.BmpWidth = bmp32.bmpInfo.biWidth;
+	bmp32.BmpHeight = bmp32.bmpInfo.biHeight;
+	bmp32.MtxWidth = bmp32.BmpWidth;
+	bmp32.MtxHeight = bmp32.BmpHeight;
+	bmp32.creatBmp32bitMtx();
+	float * lineBuf = new float[bmp32.MtxWidth];  //行缓存
+
+	for (int i = 0; i < bmp32.MtxHeight; i++)
+	{
+		fread(lineBuf, sizeof(float), bmp32.MtxWidth, file);
+		for (int j = 0; j < bmp32.MtxWidth; j++)
+		{
+			bmp32.Bmp32Mtx[i][j] = lineBuf[j];
+		}
+	}
+	fclose(file);
+	file;
+	err;
+	err = fopen_s(&file, InLocBmpName, "rb");
+	if (file == NULL)
+	{
+		printf("Input file is not found!");
+		return -1;
+	}
+	//数据读取
+	fread(&(bmp.bmpHead), sizeof(BITMAPFILEHEADER), 1, file);
+	fread(&(bmp.bmpInfo), sizeof(BITMAPINFOHEADER), 1, file);
+	fread(bmp.ClrTab, sizeof(unsigned int), 256, file);
+	bmp.BmpWidth = bmp.bmpInfo.biWidth;
+	bmp.BmpHeight = bmp.bmpInfo.biHeight;
+	bmp.MtxWidth = (bmp.BmpWidth + 3) / 4 * 4; //4个一组，不足补全
+	bmp.MtxHeight = bmp.BmpHeight;
+	bmp.creatBmp8bitMtx();
+	unsigned char * line8Buf = new unsigned char[bmp.MtxWidth];  //行缓存
+
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		fread(line8Buf, sizeof(unsigned char), bmp.MtxWidth, file);
+		for (int j = 0; j < bmp.MtxWidth; j++)
+		{
+			bmp.BmpMtx[i][j] = line8Buf[j];
+		}
+	}
+
+
+
+	//缓冲区矩阵
+	unsigned int** tmpBufferMtx = NULL;
+	tmpBufferMtx = new unsigned int*[bmp32.MtxHeight];
+
+	unsigned int** bufferMtx = NULL;
+	unsigned char** buffer8Mtx = NULL;
+	unsigned char** tmpBuffer8Mtx = NULL;
+	bufferMtx = new unsigned int*[bmp32.MtxHeight];
+	buffer8Mtx = new unsigned char*[bmp.MtxHeight];
+	tmpBuffer8Mtx = new unsigned char*[bmp.MtxHeight];
+	for (int i = 0; i < bmp32.MtxHeight; i++)
+	{
+		bufferMtx[i] = new unsigned int[bmp32.MtxWidth];
+		tmpBufferMtx[i] = new unsigned int[bmp32.MtxWidth];
+	}
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		buffer8Mtx[i] = new unsigned char[bmp.MtxWidth];
+		tmpBuffer8Mtx[i] = new unsigned char[bmp.MtxWidth];
+	}
+	//缓冲区运算
+	for (int i = 0; i < bmp32.MtxHeight; i++)
+	{
+		for (int j = 0; j < bmp32.MtxWidth; j++)
+		{
+			if (bmp32.Bmp32Mtx[i][j] < bufferWidth)
+			{
+				bufferMtx[i][j] = 0xfff;
+				buffer8Mtx[i][j] = bmp.BmpMtx[i][j];
+			}
+			else
+			{
+				bufferMtx[i][j] = 0xffffffff;
+				buffer8Mtx[i][j] = 0x00;  //黑色
+			}
+		}
+	}
+
+	//分配场边界提取运算
+	for (int i = 0; i < bmp32.MtxHeight; i++)
+	{
+		for (int j = 0; j < bmp32.MtxWidth; j++)
+		{
+			//四个位置
+			int CXL = j - 1;  //左边
+			int CXR = j + 1;  //右
+			int CYD = i + 1;  //下
+			int CYT = i - 1;  //上
+			//检验位置的合法性
+			if ((CYT < 0) || (CYD > bmp32.BmpHeight - 1)) continue;
+			if ((CXL < 0) || (CXR > bmp32.BmpWidth - 1))continue;
+			//这里if该用bufferMtx，但鉴于没有输出，暂不改了
+			if (bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[CYT][j] && bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[CYD][j]
+				&& bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[i][CXR] && bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[i][CXL])
+			{
+				tmpBufferMtx[i][j] = 0xffffffff;
+			}
+			else
+			{
+				tmpBufferMtx[i][j] = bufferMtx[i][j];
+			}
+
+		}
+	}
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		for (int j = 0; j < bmp.MtxWidth; j++)
+		{
+			//四个位置
+			int CXL = j - 1;  //左边
+			int CXR = j + 1;  //右
+			int CYD = i + 1;  //下
+			int CYT = i - 1;  //上
+			//检验位置的合法性
+			if ((CYT < 0) || (CYD > bmp.BmpHeight - 1)) continue;
+			if ((CXL < 0) || (CXR > bmp.BmpWidth - 1))continue;
+			if (buffer8Mtx[i][j] == buffer8Mtx[CYT][j] && buffer8Mtx[i][j] == buffer8Mtx[CYD][j]
+				&& buffer8Mtx[i][j] == buffer8Mtx[i][CXR] && buffer8Mtx[i][j] == buffer8Mtx[i][CXL])
+			{
+				if (buffer8Mtx[i][j] != 0x00)
+					tmpBuffer8Mtx[i][j] = 0xff;
+				else
+					tmpBuffer8Mtx[i][j] = 0x00;
+			}
+			else
+			{
+				tmpBuffer8Mtx[i][j] = buffer8Mtx[i][j];
+			}
+
+		}
+	}
+
+	//创建位图
+	FILE* //创建位图
+		filew;
+	//errno_t err;
+	//err = 
+	err = fopen_s(&filew, OutBmpName, "wb");
+	
+	if (filew == NULL)
+	{
+		printf("Output file is not found!");
+		return -1;
+	}
+	fwrite(&(bmp.bmpHead), sizeof(BITMAPFILEHEADER), 1, filew);
+	fwrite(&(bmp.bmpInfo), sizeof(BITMAPINFOHEADER), 1, filew);
+	fwrite(bmp.ClrTab, 1024, 1, filew);
+	//写入位图
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		fwrite(tmpBuffer8Mtx[i], sizeof(unsigned char), bmp.MtxWidth, filew);  //
+	}
+
+	/*
+	//用距离矩阵写入位图,float和int位数相同时
+	for (int i = 0; i < bmp32.MtxHeight; i++)
+	{
+		fwrite(bufferMtx[i], sizeof(unsigned int), bmp32.BmpWidth, filew);//不必补齐,int已经是4的倍数
+	}*/
+
+	//清理扫尾,类析构自动清除
+	fclose(filew);
+	fclose(file);
+	delete[] lineBuf;
+	lineBuf = NULL;
+	for (int i = 0; i < bmp32.BmpHeight; i++)
+	{
+		delete[] bufferMtx[i];
+		bufferMtx[i] = NULL;
+	}
+	return 0;
+
+}
+
+int adhesionTrans(float bufferWidth,const char*InBmpName, const char*OutsideDistBmp, const char*OutsideLocBmp, const char*InsideDistBmp, const char*InsideLocBmp, const char * OutsideBmp, const char * InsideBmp, DistanceTemplate* pdisTmp)
+{
+	//加壳变换
+	Bmp8BitDistTrans(InBmpName, OutsideDistBmp, OutsideLocBmp, pdisTmp);  //外距变换
+	//获取外距变换缓冲区
+	getBufferSetBlack(bufferWidth, OutsideDistBmp, OutsideLocBmp, OutsideBmp);
+	//蜕皮变换
+	Bmp8BitDistTrans(OutsideBmp, InsideDistBmp, InsideLocBmp, pdisTmp);  //内距变换
+	//获取内距变换缓冲区
+	getBufferSetWhite(bufferWidth, InsideDistBmp, InsideLocBmp, InsideBmp);  //最终结果
+	return 0;
+}
+
+
+int getBufferSetWhite(float bufferWidth, const char * InBmpName, const char * InLocBmpName, const char * OutBmpName)
+{
+	//获取缓冲区并将内部设置为白色
+	BitMap bmp32, bmp, tmp8Bmp;
+	FILE* file;
+	errno_t err;
+	err = fopen_s(&file, InBmpName, "rb");
+	if (file == NULL)
+	{
+		printf("Input file is not found!");
+		return -1;
+	}
+	//数据读取
+	fread(&(bmp32.bmpHead), sizeof(BITMAPFILEHEADER), 1, file);
+	fread(&(bmp32.bmpInfo), sizeof(BITMAPINFOHEADER), 1, file);
+
+	bmp32.BmpWidth = bmp32.bmpInfo.biWidth;
+	bmp32.BmpHeight = bmp32.bmpInfo.biHeight;
+	bmp32.MtxWidth = bmp32.BmpWidth;
+	bmp32.MtxHeight = bmp32.BmpHeight;
+	bmp32.creatBmp32bitMtx();
+	float * lineBuf = new float[bmp32.MtxWidth];  //行缓存
+
+	for (int i = 0; i < bmp32.MtxHeight; i++)
+	{
+		fread(lineBuf, sizeof(float), bmp32.MtxWidth, file);
+		for (int j = 0; j < bmp32.MtxWidth; j++)
+		{
+			bmp32.Bmp32Mtx[i][j] = lineBuf[j];
+		}
+	}
+	fclose(file);
+	file;
+	err;
+	err = fopen_s(&file, InLocBmpName, "rb");
+	if (file == NULL)
+	{
+		printf("Input file is not found!");
+		return -1;
+	}
+	//数据读取
+	fread(&(bmp.bmpHead), sizeof(BITMAPFILEHEADER), 1, file);
+	fread(&(bmp.bmpInfo), sizeof(BITMAPINFOHEADER), 1, file);
+	fread(bmp.ClrTab, sizeof(unsigned int), 256, file);
+	bmp.BmpWidth = bmp.bmpInfo.biWidth;
+	bmp.BmpHeight = bmp.bmpInfo.biHeight;
+	bmp.MtxWidth = (bmp.BmpWidth + 3) / 4 * 4; //4个一组，不足补全
+	bmp.MtxHeight = bmp.BmpHeight;
+	bmp.creatBmp8bitMtx();
+	unsigned char * line8Buf = new unsigned char[bmp.MtxWidth];  //行缓存
+
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		fread(line8Buf, sizeof(unsigned char), bmp.MtxWidth, file);
+		for (int j = 0; j < bmp.MtxWidth; j++)
+		{
+			bmp.BmpMtx[i][j] = line8Buf[j];
+		}
+	}
+
+
+
+	//缓冲区矩阵
+	unsigned int** tmpBufferMtx = NULL;
+	tmpBufferMtx = new unsigned int*[bmp32.MtxHeight];
+	unsigned int** bufferMtx = NULL;
+	unsigned char** buffer8Mtx = NULL;
+	unsigned char** tmpBuffer8Mtx = NULL;
+	bufferMtx = new unsigned int*[bmp32.MtxHeight];
+	buffer8Mtx = new unsigned char*[bmp.MtxHeight];
+	tmpBuffer8Mtx = new unsigned char*[bmp.MtxHeight];
+	for (int i = 0; i < bmp32.MtxHeight; i++)
+	{
+		bufferMtx[i] = new unsigned int[bmp32.MtxWidth];
+		tmpBufferMtx[i] = new unsigned int[bmp32.MtxWidth];
+	}
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		buffer8Mtx[i] = new unsigned char[bmp.MtxWidth];
+		tmpBuffer8Mtx[i] = new unsigned char[bmp.MtxWidth];
+	}
+	//缓冲区运算
+	for (int i = 0; i < bmp32.MtxHeight; i++)
+	{
+		for (int j = 0; j < bmp32.MtxWidth; j++)
+		{
+			if (bmp32.Bmp32Mtx[i][j] < bufferWidth)
+			{
+				bufferMtx[i][j] = 0xfff;
+				buffer8Mtx[i][j] = 0xff;
+			}
+			else
+			{
+				bufferMtx[i][j] = 0xffffffff;
+				if (bmp.BmpMtx[i][j] == 0x00)
+					buffer8Mtx[i][j] = 0xff;  //白色
+				else
+					buffer8Mtx[i][j] = bmp.BmpMtx[i][j];
+			}
+		}
+	}
+	/*
+	//分配场边界提取运算
+	for (int i = 0; i < bmp32.MtxHeight; i++)
+	{
+		for (int j = 0; j < bmp32.MtxWidth; j++)
+		{
+			//四个位置
+			int CXL = j - 1;  //左边
+			int CXR = j + 1;  //右
+			int CYD = i + 1;  //下
+			int CYT = i - 1;  //上
+			//检验位置的合法性
+			if ((CYT < 0) || (CYD > bmp32.BmpHeight - 1)) continue;
+			if ((CXL < 0) || (CXR > bmp32.BmpWidth - 1))continue;
+			//这里if该用bufferMtx，但鉴于没有输出，暂不改了
+			if (bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[CYT][j] && bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[CYD][j]
+				&& bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[i][CXR] && bmp32.Bmp32Mtx[i][j] == bmp32.Bmp32Mtx[i][CXL])
+			{
+				bufferMtx[i][j] = 0xffffff;
+			}
+			else
+			{
+				bufferMtx[i][j] = bufferMtx[i][j];
+			}
+
+		}
+	}
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		for (int j = 0; j < bmp.MtxWidth; j++)
+		{
+			//四个位置
+			int CXL = j - 1;  //左边
+			int CXR = j + 1;  //右
+			int CYD = i + 1;  //下
+			int CYT = i - 1;  //上
+			//检验位置的合法性
+			if ((CYT < 0) || (CYD > bmp.BmpHeight - 1)) continue;
+			if ((CXL < 0) || (CXR > bmp.BmpWidth - 1))continue;
+			if (buffer8Mtx[i][j] == buffer8Mtx[CYT][j] && buffer8Mtx[i][j] == buffer8Mtx[CYD][j]
+				&& buffer8Mtx[i][j] == buffer8Mtx[i][CXR] && buffer8Mtx[i][j] == buffer8Mtx[i][CXL])
+			{
+				if (buffer8Mtx[i][j] != 0x00)
+					tmpBuffer8Mtx[i][j] = 0xff;
+				else
+					tmpBuffer8Mtx[i][j] = 0x00;
+			}
+			else
+			{
+				tmpBuffer8Mtx[i][j] = buffer8Mtx[i][j];
+			}
+
+		}
+	}
+	*/
+	//创建位图
+	FILE* //创建位图
+		filew;
+	//errno_t err;
+	//err = 
+	err = fopen_s(&filew, OutBmpName, "wb");
+	
+	if (filew == NULL)
+	{
+		printf("Output file is not found!");
+		return -1;
+	}
+	fwrite(&(bmp.bmpHead), sizeof(BITMAPFILEHEADER), 1, filew);
+	fwrite(&(bmp.bmpInfo), sizeof(BITMAPINFOHEADER), 1, filew);
+	fwrite(bmp.ClrTab, 1024, 1, filew);
+	//写入位图
+	for (int i = 0; i < bmp.MtxHeight; i++)
+	{
+		fwrite(buffer8Mtx[i], sizeof(unsigned char), bmp.MtxWidth, filew);
+	}
+
+	/*
+	//用距离矩阵写入位图,float和int位数相同时
+	for (int i = 0; i < bmp32.MtxHeight; i++)
+	{
+		fwrite(bufferMtx[i], sizeof(unsigned int), bmp32.BmpWidth, filew);//不必补齐,int已经是4的倍数
+	}*/
+
 	//清理扫尾,类析构自动清除
 	fclose(filew);
 	fclose(file);

@@ -42,6 +42,12 @@
     <ClInclude Include="BitMap32bit.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="MyPoint.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DDALine.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -72,6 +78,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="BitMap32bit.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyPoint.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DDALine.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

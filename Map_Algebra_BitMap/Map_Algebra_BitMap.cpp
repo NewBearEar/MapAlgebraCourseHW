@@ -8,28 +8,33 @@
 #include"MA.h"
 
 using namespace std;
-//反色，叠置，均值平滑,8位图转32位,8位图距离变换（带障碍）,v图边界,缓冲区，内距变换(中轴),Delauney三角网
+//反色，叠置，均值平滑,8位图转32位,8位图距离变换（带障碍）,v图边界,缓冲区，内距变换(中轴),粘连变换,Delauney三角网
 typedef enum
 {
-	BMPREVERSE,BMPOVERLAY,MEANSMOOTH,BMP8BIT_TO_32BIT,BMP8BIT_DISTTRANS,VORONOIBOUND, BUFFER
+	BMPREVERSE,BMPOVERLAY,MEANSMOOTH,BMP8BIT_TO_32BIT,BMP8BIT_DISTTRANS,VORONOIBOUND, BUFFER,AXIS, ADHESION_TRANS,DELAUNEY
 }MA_ALGORITHM;
 int main()
 {
     cout << "Hello World!\n"; 	
 
 	//选择算法
-	cout << "请选择算法" << endl;
+	cout << "请选择算法：" << endl;
 	cout << "0-反色运算" << endl << "1-叠置运算" << endl << "2-均值平滑" << endl << "3-8位转32位" << endl;
-	cout << "4-8位图距离变换" << endl << "5-V图边界提取" << endl << "6-缓冲区" << endl;
+	cout << "4-8位图距离变换" << endl << "5-V图边界提取" << endl << "6-缓冲区" << endl<<"7-中轴提取"<<endl;
+	cout << "8-粘连变换" << endl<< "9-delauney三角网提取" << endl;
 	char * InputBmpName1 = new char[1024];
 	char * InputBmpName2 = new char[1024];
 	char * OutputBmpName1 = new char[1024];
 	char * OutputBmpName2 = new char[1024];
+	char * OutputBmpName3 = new char[1024];
+	char * OutputBmpName4 = new char[1024];
+	char * OutputBmpName5 = new char[1024];
+	char * OutputBmpName6 = new char[1024];
 	//测试障碍距离变换
 		//DistanceTemplate* distemp = new Dist5Tmp();  //5×5模板
 		//DistanceTemplate* distemp = new DistOctTmp();//八边形模板
 	DistanceTemplate* distemp = new Dist13Tmp();//13×13模板
-
+	float bufferWidth = 0; //缓冲区宽度
 	int algorChoose = -1;
 	cin >> algorChoose; //输入
 	switch (algorChoose)
@@ -66,7 +71,7 @@ int main()
 		break;
 	case BMP8BIT_DISTTRANS:
 		
-		cout << "待平滑的文件路径：" << endl;
+		cout << "待距离变换的文件路径：" << endl;
 		cin >> InputBmpName1;
 		cout << "输出距离场文件的路径：" << endl;
 		cin >> OutputBmpName1;
@@ -87,7 +92,51 @@ int main()
 		cin >> InputBmpName1;
 		cout << "输出文件的路径：" << endl;
 		cin >> OutputBmpName1;
-		getBufferFromDis(10, InputBmpName1, OutputBmpName1);//缓冲区
+		cout << "缓冲区宽度：" << endl;
+		cin >> bufferWidth;
+		getBufferFromDis(bufferWidth, InputBmpName1, OutputBmpName1);//缓冲区
+		break;
+	case AXIS:
+		cout << "待提取中轴的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出距离场文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		cout << "输出分配场文件的路径：" << endl;
+		cin >> OutputBmpName2;
+		cout << "输出中轴的路径：" << endl;
+		cin >> OutputBmpName3;
+		Bmp8BitDistTrans(InputBmpName1, OutputBmpName1, OutputBmpName2, distemp); //调用距离变换
+		getVoronoiBoundary(OutputBmpName2, OutputBmpName3); //获取v图
+		break;
+	case DELAUNEY:
+		cout << "待提取三角网的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出分配场的路径：" << endl;
+		cin >> OutputBmpName1;
+		cout << "输出V图的路径：" << endl;
+		cin >> OutputBmpName2;
+		cout << "输出Delauney的路径：" << endl;
+		cin >> OutputBmpName3;
+		getDelauney(InputBmpName1, OutputBmpName1,OutputBmpName2,OutputBmpName3, distemp);  
+		break;
+	case ADHESION_TRANS:
+		cout << "待粘连变换的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出外距变换距离场的路径：" << endl;
+		cin >> OutputBmpName1;
+		cout << "输出外距变换分配场的路径：" << endl;
+		cin >> OutputBmpName2;
+		cout << "输出内距变换距离场的路径：" << endl;
+		cin >> OutputBmpName3;
+		cout << "输出内距变换分配场的路径：" << endl;
+		cin >> OutputBmpName4;
+		cout << "输出外距变换的路径：" << endl;
+		cin >> OutputBmpName5;
+		cout << "输出内距变换（最终结果）的路径：" << endl;
+		cin >> OutputBmpName6;
+		cout << "缓冲区宽度：" << endl;
+		cin >> bufferWidth;
+		adhesionTrans(bufferWidth,InputBmpName1, OutputBmpName1, OutputBmpName2, OutputBmpName3, OutputBmpName4, OutputBmpName5, OutputBmpName6, distemp);
 		break;
 	default:
 		break;
