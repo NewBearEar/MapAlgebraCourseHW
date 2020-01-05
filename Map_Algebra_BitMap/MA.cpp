@@ -822,7 +822,7 @@ int getBufferFromDis(float bufferWidth, const char * InBmpName, const char * Out
 
 }
 
-int getDelauney(const char * InBmpName, const char*OutLocBmp, const char*OutVoronoiBmp, const char * OutDelauneyBmp, DistanceTemplate * pdisTmp)
+int getDelaunay(const char * InBmpName, const char*OutLocBmp, const char*OutVoronoiBmp, const char * OutDelaunayBmp, DistanceTemplate * pdisTmp)
 {
 	BitMap bmp, bmp2, bmploc;
 	FILE* file;
@@ -868,7 +868,7 @@ int getDelauney(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 		DistMtx[i] = new float[bmp.MtxWidth];
 	}
 	vector<MyPoint> sourcePoint; //记录所有点
-	vector<pair<MyPoint, MyPoint>> delauneyVertexs;  //记录三角网顶点对
+	vector<pair<MyPoint, MyPoint>> DelaunayVertexs;  //记录三角网顶点对
 	MyPoint tmpPt1, tmpPt2;
 	//2.读取位图数据并复制到分配场
 	unsigned char* lineBuf = new unsigned char[bmp.MtxWidth];  //行缓存
@@ -1045,7 +1045,7 @@ int getDelauney(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 							tmpPt2 = *iter;
 						}
 					}
-					delauneyVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
+					DelaunayVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
 				}
 				else if (bmp2.BmpMtx[i][j] != bmp2.BmpMtx[CYD][j])
 				{
@@ -1061,7 +1061,7 @@ int getDelauney(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 							tmpPt2 = *iter;
 						}
 					}
-					delauneyVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
+					DelaunayVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
 				}
 				else if (bmp2.BmpMtx[i][j] != bmp2.BmpMtx[i][CXR])
 				{
@@ -1077,7 +1077,7 @@ int getDelauney(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 							tmpPt2 = *iter;
 						}
 					}
-					delauneyVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
+					DelaunayVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
 				}
 				else if(bmp2.BmpMtx[i][j] != bmp2.BmpMtx[i][CXL])
 				{
@@ -1093,7 +1093,7 @@ int getDelauney(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 							tmpPt2 = *iter;
 						}
 					}
-					delauneyVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
+					DelaunayVertexs.push_back(pair<MyPoint, MyPoint>(tmpPt1, tmpPt2));
 				}
 			}
 
@@ -1123,8 +1123,8 @@ int getDelauney(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 	//*******************************************/
 
 	//绘制三角网
-	vector<pair<MyPoint, MyPoint>>::iterator iter = delauneyVertexs.begin();
-	for (; iter != delauneyVertexs.end(); iter++)
+	vector<pair<MyPoint, MyPoint>>::iterator iter = DelaunayVertexs.begin();
+	for (; iter != DelaunayVertexs.end(); iter++)
 	{
 		DDALine dda(&(iter->first), &(iter->second));
 		dda.draw(boundMtx);
@@ -1134,7 +1134,7 @@ int getDelauney(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 	filew;
 	//errno_t err;
 	//err = 
-	err = fopen_s(&filew, OutDelauneyBmp, "wb");
+	err = fopen_s(&filew, OutDelaunayBmp, "wb");
 	if (filew == NULL)
 	{
 		printf("Output file is not found!");

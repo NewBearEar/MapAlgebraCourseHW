@@ -15,7 +15,7 @@ int mean33Smooth(const char* InBmpName, const char*OutBmpName);  //3×3平滑
 int Bmp8BitDistTrans(const char*InBmpName, const char*OutDistBmp, const char*OutLocBmp,DistanceTemplate* pdisTmp);
 int getVoronoiBoundary(const char*InBmpName, const char*OutBmpName);  //getBdyFromLoc从分配场获取边界
 int getBufferFromDis(float bufferWidth, const char*InBmpName, const char*OutBmpName);//从距离场获得缓冲区边界
-int getDelauney(const char*InBmpName, const char*OutLocBmp,const char*OutVoronoiBmp,const char*OutDelauneyBmp, DistanceTemplate* pdisTmp);  //获取delauney三角网
+int getDelaunay(const char*InBmpName, const char*OutLocBmp,const char*OutVoronoiBmp,const char*OutDelauneyBmp, DistanceTemplate* pdisTmp);  //获取delaunay三角网
 int getBufferSetBlack(float bufferWidth, const char * InBmpName, const char * InLocBmpName, const char * OutBmpName);//获取缓冲区并将外部设置为黑色
 int adhesionTrans(float bufferWidth,const char*InBmpName, const char*OutsideDistBmp, const char*OutsideLocBmp,const char*InsideDistBmp, const char*InsideLocBmp, const char * OutsideBmp, const char * InsideBmp, DistanceTemplate* pdisTmp); //粘连变换
 int getBufferSetWhite(float bufferWidth, const char * InBmpName, const char * InLocBmpName, const char * OutBmpName);  //获取缓冲区并将内部设置为白色
