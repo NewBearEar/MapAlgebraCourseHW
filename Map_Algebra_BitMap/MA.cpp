@@ -4,6 +4,9 @@
 #include"MA.h"
 #include"BitMap.h"
 #include<time.h>
+#include<gdal_priv.h>
+#include<gdal.h>
+
 #define Float_MAX FLT_MAX
 #define Float_MIN 0.000001
 #define Float_BARRIER 10000000.0
@@ -280,6 +283,54 @@ lineBuf = NULL;
 return 0;
 }
 
+int Tif2Bmp(const char* InName, const char* OutName) {
+	//应付硕士作业，Tif转bmp，复用代码
+	GDALAllRegister();
+	GDALDataset* poDataset = (GDALDataset*)GDALOpen(InName, GA_ReadOnly);
+	GDALRasterBand* poBand = poDataset->GetRasterBand(1);
+
+	GDALDriver* pdrv = GetGDALDriverManager()->GetDriverByName("BMP");
+	const char* outFiletest = OutName;
+	GDALDataset* dst = pdrv->CreateCopy(outFiletest, poDataset, 0, NULL, NULL, NULL);
+	GDALClose(dst);
+	return 0;
+}
+
+int Bmp2Tif(const char* InName, const char* OutName) {
+	GDALAllRegister();
+	GDALDataset* poDataset = (GDALDataset*)GDALOpen(InName, GA_ReadOnly);
+	GDALRasterBand* poBand = poDataset->GetRasterBand(1);
+
+	GDALDriver* pdrv = GetGDALDriverManager()->GetDriverByName("GTIFF");
+	const char* outFiletest = OutName;
+	GDALDataset* dst = pdrv->CreateCopy(outFiletest, poDataset, 0, NULL, NULL, NULL);
+	GDALClose(dst);
+	return 0;
+}
+
+int TifReverse(const char* InTifName, const char* OutTifName) {
+	const char* tmpBmpName = "./results1/tempBmp.bmp";
+	const char* tmpBmpOutName = "./results1/tempOutBmp.bmp";
+	Tif2Bmp(InTifName, tmpBmpName);
+	BmpReverse(tmpBmpName, tmpBmpOutName);
+	Bmp2Tif(tmpBmpOutName, OutTifName);
+	return 0;
+}
+
+int TifOverlay(const char* InTifName1, const char* InTifName2, const char* OutTifName)
+{
+	const char* tmpBmpName1 = "./results1/tempBmp1.bmp";
+	const char* tmpBmpName2 = "./results1/tempBmp2.bmp";
+	
+	const char* tmpBmpOutName = "./results1/tempOutBmp.bmp";
+	Tif2Bmp(InTifName1, tmpBmpName1);
+	Tif2Bmp(InTifName2, tmpBmpName2);
+
+	BmpOverlay(tmpBmpName1, tmpBmpName2, tmpBmpOutName);
+	Bmp2Tif(tmpBmpOutName,OutTifName);
+	return 0;
+}
+
 int mean33Smooth(const char* InBmpName, const char*OutBmpName)
 {
 	BitMap bmp,bmpmean;
@@ -366,6 +417,23 @@ int mean33Smooth(const char* InBmpName, const char*OutBmpName)
 	return 0;
 }
 
+int TifDistTrans(const char* InTifName, const char* OutDistTif, const char* OutLocTif, DistanceTemplate* pdisTmp) {
+	const char* tmpBmpName1 = "./results1/tempBmp1.bmp";
+	const char* tmpBmpName2 = "./results1/tempBmp2.bmp";
+
+	const char* tmpBmpOutName1 = "./results1/tempOutBmp1.bmp";
+	const char* tmpBmpOutName2 = "./results1/tempOutBmp2.bmp";
+	Tif2Bmp(InTifName, tmpBmpName1);
+	//Tif2Bmp(InTifName2, tmpBmpName2);
+
+	Bmp8BitDistTrans(tmpBmpName1, tmpBmpOutName1, tmpBmpOutName2,pdisTmp);
+
+	Bmp2Tif(tmpBmpOutName1, OutDistTif);
+	Bmp2Tif(tmpBmpOutName2, OutLocTif);
+
+	return 0;
+}
+
 int Bmp8BitDistTrans(const char*InBmpName, const char*OutDistBmp, const char*OutLocBmp, DistanceTemplate* pdisTmp)
 {
 	BitMap bmp,bmp2,bmploc;
@@ -420,8 +488,8 @@ int Bmp8BitDistTrans(const char*InBmpName, const char*OutDistBmp, const char*Out
 	for (int i = 0; i < bmp.MtxHeight; i++){
 		for (int j = 0; j < bmp.MtxWidth; j++){
 			if (LocMtx[i][j] == 0xff) DistMtx[i][j] = Float_MAX;
-			//加入障碍部分，为黑色
-			else if (LocMtx[i][j] == 0x00) DistMtx[i][j] = Float_BARRIER;
+			//加入障碍部分，为黑色0x01和0x00
+			else if (LocMtx[i][j] == 0x01 && LocMtx[i][j] == 0x00) DistMtx[i][j] = Float_BARRIER;
 			else{
 				DistMtx[i][j] = 0;  //非加权赋值
 				//加权赋值
@@ -562,6 +630,15 @@ int Bmp8BitDistTrans(const char*InBmpName, const char*OutDistBmp, const char*Out
 	delete[] DistMtx;
 	DistMtx = NULL;
 
+	return 0;
+}
+
+int getTifBoundary(const char* InTifName, const char* OutTifName) {
+	const char* tmpBmpName = "./results1/tempBmp.bmp";
+	const char* tmpBmpOutName = "./results1/tempOutBmp.bmp";
+	Tif2Bmp(InTifName, tmpBmpName);
+	getVoronoiBoundary(tmpBmpName, tmpBmpOutName);
+	Bmp2Tif(tmpBmpOutName, OutTifName);
 	return 0;
 }
 

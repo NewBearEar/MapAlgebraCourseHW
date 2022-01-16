@@ -6,22 +6,60 @@
 #include <string>
 #include <sstream>
 #include"MA.h"
+#include <gdal_priv.h>
+#include<gdal.h>
 
 using namespace std;
 //反色，叠置，均值平滑,8位图转32位,8位图距离变换（带障碍）,v图边界,缓冲区，内距变换(中轴),粘连变换,Delaunay三角网
 typedef enum
 {
-	BMPREVERSE,BMPOVERLAY,MEANSMOOTH,BMP8BIT_TO_32BIT,BMP8BIT_DISTTRANS,VORONOIBOUND, BUFFER,AXIS, ADHESION_TRANS,DELAUNAY
+	BMPREVERSE,BMPOVERLAY,MEANSMOOTH,BMP8BIT_TO_32BIT,BMP8BIT_DISTTRANS,VORONOIBOUND, BUFFER,AXIS, ADHESION_TRANS,DELAUNAY,
+	TIFFREVERSE,TIFFOVERLAY,TIFFBOUND,TIFF_DISTTRANS
 }MA_ALGORITHM;
 int main()
 {
     cout << "Hello World!\n"; 	
+
+	/*
+	const char* pszFile;
+	pszFile = "./data/gym_raster.tif";
+	const char* pszOut = "./data/test3.bmp";
+	Tif2Bmp(pszFile, pszOut);
+	*/
+	/*
+	const char* pszFile;
+	GDALAllRegister();
+	pszFile = "./data/test1.bmp";
+	GDALDataset* poDataset = (GDALDataset*)GDALOpen(pszFile, GA_ReadOnly);
+	GDALRasterBand* poBand = poDataset->GetRasterBand(1);
+
+	GDALDriver* pdrv = GetGDALDriverManager()->GetDriverByName("BMP");
+	const char* outFiletest = "./data/test1.bmp";
+	GDALDataset* dst =  pdrv->CreateCopy(outFiletest, poDataset, 0, NULL, NULL, NULL);
+	GDALClose(dst);
+
+	double trans[6];
+	CPLErr aaa = poDataset->GetGeoTransform(trans);
+	
+	int xsize = poBand->GetXSize();
+	int ysize = poBand->GetYSize();
+
+	cout << aaa << endl;
+	cout << xsize << endl;
+	cout << ysize << endl;
+	*/
+
 
 	//选择算法
 	cout << "请选择算法：" << endl;
 	cout << "0-反色运算" << endl << "1-叠置运算" << endl << "2-均值平滑" << endl << "3-8位转32位" << endl;
 	cout << "4-8位图距离变换" << endl << "5-V图边界提取" << endl << "6-缓冲区" << endl<<"7-中轴提取"<<endl;
 	cout << "8-粘连变换" << endl<< "9-delaunay三角网提取" << endl;
+	cout << "10-TIFF反色运算" << endl;
+	cout << "11-TIFF叠置运算" << endl;
+	cout << "12-TIFF边界提取" << endl;
+	cout << "13-TIFF距离变换" << endl;
+	
 	char * InputBmpName1 = new char[1024];
 	char * InputBmpName2 = new char[1024];
 	char * OutputBmpName1 = new char[1024];
@@ -31,9 +69,9 @@ int main()
 	char * OutputBmpName5 = new char[1024];
 	char * OutputBmpName6 = new char[1024];
 	//测试障碍距离变换
-		//DistanceTemplate* distemp = new Dist5Tmp();  //5×5模板
+	DistanceTemplate* distemp = new Dist5Tmp();  //5×5模板
 		//DistanceTemplate* distemp = new DistOctTmp();//八边形模板
-	DistanceTemplate* distemp = new Dist13Tmp();//13×13模板
+	//DistanceTemplate* distemp = new Dist13Tmp();//13×13模板
 	float bufferWidth = 0; //缓冲区宽度
 	int algorChoose = -1;
 	cin >> algorChoose; //输入
@@ -46,6 +84,14 @@ int main()
 		cin >> OutputBmpName1;
 		BmpReverse(InputBmpName1, OutputBmpName1); //调用反色函数
 		break;
+	case TIFFREVERSE:
+		// 输入输出tiff
+		cout << "源文件的路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		TifReverse(InputBmpName1, OutputBmpName1); //调用反色函数
+		break;
 	case BMPOVERLAY:
 		cout << "待叠加的文件路径：" << endl;
 		cin >> InputBmpName1;
@@ -54,6 +100,16 @@ int main()
 		cout << "输出文件的路径：" << endl;
 		cin >> OutputBmpName1;
 		BmpOverlay(InputBmpName1, InputBmpName2, OutputBmpName1); //调用叠加函数
+		break;
+	case TIFFOVERLAY:
+		//变量名没改，但是要用TIFF
+		cout << "待叠加的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "叠加的文件路径：" << endl;
+		cin >> InputBmpName2;
+		cout << "输出文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		TifOverlay(InputBmpName1, InputBmpName2, OutputBmpName1); //调用叠加函数
 		break;
 	case MEANSMOOTH:
 		cout << "待平滑的文件路径：" << endl;
@@ -79,6 +135,16 @@ int main()
 		cin >> OutputBmpName2;
 		Bmp8BitDistTrans(InputBmpName1, OutputBmpName1, OutputBmpName2, distemp); //调用距离变换
 		break;
+	case TIFF_DISTTRANS:
+
+		cout << "待距离变换的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出距离场文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		cout << "输出分配场文件的路径：" << endl;
+		cin >> OutputBmpName2;
+		TifDistTrans(InputBmpName1, OutputBmpName1, OutputBmpName2, distemp); //调用距离变换
+		break;
 	case VORONOIBOUND:
 		cout << "分配场的文件路径：" << endl;
 		cin >> InputBmpName1;
@@ -86,7 +152,14 @@ int main()
 		cin >> OutputBmpName1;
 		getVoronoiBoundary(InputBmpName1, OutputBmpName1); //获取v图
 		break;
-
+	case TIFFBOUND:
+		cout << "输入的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出文件的路径：" << endl;
+		cin >> OutputBmpName1;
+		getTifBoundary(InputBmpName1, OutputBmpName1); //获取边界
+		break;
+		
 	case BUFFER:
 		cout << "距离场的文件路径：" << endl;
 		cin >> InputBmpName1;
@@ -141,7 +214,7 @@ int main()
 	default:
 		break;
 	}
-
+	cout << "完成！" << endl;
 
 	/*
 	stringstream sstr;  //字符串流，可用于char*到string ，也可用string的data（）方法
