@@ -10,11 +10,11 @@
 #include<gdal.h>
 
 using namespace std;
-//反色，叠置，均值平滑,8位图转32位,8位图距离变换（带障碍）,v图边界,缓冲区，内距变换(中轴),粘连变换,Delaunay三角网
+//反色，叠置，均值平滑,8位图转32位,8位图距离变换（带障碍）,v图边界,缓冲区，内距变换(中轴),粘连变换,Delaunay三角网，TIFF算法等
 typedef enum
 {
 	BMPREVERSE,BMPOVERLAY,MEANSMOOTH,BMP8BIT_TO_32BIT,BMP8BIT_DISTTRANS,VORONOIBOUND, BUFFER,AXIS, ADHESION_TRANS,DELAUNAY,
-	TIFFREVERSE,TIFFOVERLAY,TIFFBOUND,TIFF_DISTTRANS
+	TIFFREVERSE,TIFFOVERLAY,TIFFBOUND,TIFF_DISTTRANS, TIFF_DELAUNAY
 }MA_ALGORITHM;
 int main()
 {
@@ -59,6 +59,7 @@ int main()
 	cout << "11-TIFF叠置运算" << endl;
 	cout << "12-TIFF边界提取" << endl;
 	cout << "13-TIFF距离变换" << endl;
+	cout << "14-TIFF_Delaunay三角网提取" << endl;
 	
 	char * InputBmpName1 = new char[1024];
 	char * InputBmpName2 = new char[1024];
@@ -70,8 +71,8 @@ int main()
 	char * OutputBmpName6 = new char[1024];
 	//测试障碍距离变换
 	DistanceTemplate* distemp = new Dist5Tmp();  //5×5模板
-		//DistanceTemplate* distemp = new DistOctTmp();//八边形模板
-	//DistanceTemplate* distemp = new Dist13Tmp();//13×13模板
+	//DistanceTemplate* distemp = new DistOctTmp();//八边形模板
+	//DistanceTemplate* distemp = new Dist13Tmp();//13×13模板,基本模拟真实欧式距离
 	float bufferWidth = 0; //缓冲区宽度
 	int algorChoose = -1;
 	cin >> algorChoose; //输入
@@ -192,6 +193,19 @@ int main()
 		cin >> OutputBmpName3;
 		getDelaunay(InputBmpName1, OutputBmpName1,OutputBmpName2,OutputBmpName3, distemp);  
 		break;
+	
+	case TIFF_DELAUNAY:
+		cout << "待提取三角网的文件路径：" << endl;
+		cin >> InputBmpName1;
+		cout << "输出分配场的路径：" << endl;
+		cin >> OutputBmpName1;
+		cout << "输出V图的路径：" << endl;
+		cin >> OutputBmpName2;
+		cout << "输出Delaunay的路径：" << endl;
+		cin >> OutputBmpName3;
+		getTifDelaunay(InputBmpName1, OutputBmpName1, OutputBmpName2, OutputBmpName3, distemp);
+		break;
+
 	case ADHESION_TRANS:
 		cout << "待粘连变换的文件路径：" << endl;
 		cin >> InputBmpName1;
@@ -215,7 +229,7 @@ int main()
 		break;
 	}
 	cout << "完成！" << endl;
-
+	return 0;
 	/*
 	stringstream sstr;  //字符串流，可用于char*到string ，也可用string的data（）方法
 	sstr.clear();

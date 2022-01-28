@@ -7,9 +7,9 @@
 #include<gdal_priv.h>
 #include<gdal.h>
 
-#define Float_MAX FLT_MAX
+#define Float_MAX 10000000.0
 #define Float_MIN 0.000001
-#define Float_BARRIER 10000000.0
+#define Float_BARRIER FLT_MAX
 
 int BmpReverse(const char* InBmpName, const char* OutBmpName)   //反色函数
 {
@@ -304,6 +304,7 @@ int Bmp2Tif(const char* InName, const char* OutName) {
 	GDALDriver* pdrv = GetGDALDriverManager()->GetDriverByName("GTIFF");
 	const char* outFiletest = OutName;
 	GDALDataset* dst = pdrv->CreateCopy(outFiletest, poDataset, 0, NULL, NULL, NULL);
+
 	GDALClose(dst);
 	return 0;
 }
@@ -488,8 +489,8 @@ int Bmp8BitDistTrans(const char*InBmpName, const char*OutDistBmp, const char*Out
 	for (int i = 0; i < bmp.MtxHeight; i++){
 		for (int j = 0; j < bmp.MtxWidth; j++){
 			if (LocMtx[i][j] == 0xff) DistMtx[i][j] = Float_MAX;
-			//加入障碍部分，为黑色0x01和0x00
-			else if (LocMtx[i][j] == 0x01 && LocMtx[i][j] == 0x00) DistMtx[i][j] = Float_BARRIER;
+			//加入障碍部分，为黑色0x00 和 0x01
+			else if (LocMtx[i][j] == 0x00 || LocMtx[i][j] == 0x01) DistMtx[i][j] = Float_BARRIER;
 			else{
 				DistMtx[i][j] = 0;  //非加权赋值
 				//加权赋值
@@ -890,7 +891,18 @@ int getDelaunay(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 				tmpPt1.x = j;
 				tmpPt1.y = i;
 				tmpPt1.loc = lineBuf[j];
-				sourcePoint.push_back(tmpPt1);
+				//加入判断，面数据只取一个点
+				int flag = 0;
+				for (vector<MyPoint>::iterator iter = sourcePoint.begin(); iter != sourcePoint.end(); iter++) {
+					if (tmpPt1.loc == iter->loc) {
+						flag = 1;
+						break;
+					}
+				}
+				if (flag == 0 && tmpPt1.loc != 0x00) {
+					sourcePoint.push_back(tmpPt1);
+				}
+				
 			}
 		}
 	}
@@ -995,7 +1007,8 @@ int getDelaunay(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 	for (int i = 0; i < bmp.MtxHeight; i++){
 		fwrite(LocMtx[i], sizeof(unsigned char), bmp.MtxWidth, filew);//8位图补齐4倍数
 	}
-
+	fclose(filew);
+	cout << "分配场输出完成"<<endl;
 	//**********************************************/
 	//边界矩阵
 	unsigned char** boundMtx = NULL;
@@ -1090,7 +1103,9 @@ int getDelaunay(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 	{
 		fwrite(boundMtx[i], sizeof(unsigned char), bmp2.MtxWidth, filew);
 	}
-
+	//扫尾清理
+	fclose(filew);
+	cout << "边界输出完成" << endl;
 	//*******************************************/
 
 	//绘制三角网
@@ -1121,6 +1136,7 @@ int getDelaunay(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 
 	//扫尾清理
 	fclose(filew);
+	cout << "三角网输出完成" << endl;
 	delete[] lineBuf;
 	lineBuf = NULL;
 	for (int i = 0; i < bmp.BmpHeight; i++)
@@ -1135,6 +1151,21 @@ int getDelaunay(const char * InBmpName, const char*OutLocBmp, const char*OutVoro
 	delete[] DistMtx;
 	DistMtx = NULL;
 
+	return 0;
+}
+
+int getTifDelaunay(const char* InTifName, const char* OutLocTif, const char* OutVoronoiTif, const char* OutDelaunayTif, DistanceTemplate* pdisTmp) {
+	const char* tmpBmpInName = "./results1/tempInBmp.bmp";
+	const char* tmpBmpLocName = "./results1/tempLocBmp.bmp";
+	const char* tmpBmpVorName = "./results1/tempVorBmp.bmp";
+	const char* tmpBmpDenName = "./results1/tempDenBmp.bmp";
+	Tif2Bmp(InTifName, tmpBmpInName);
+
+	getDelaunay(tmpBmpInName, tmpBmpLocName, tmpBmpVorName, tmpBmpDenName, pdisTmp);
+	
+	Bmp2Tif(tmpBmpLocName, OutLocTif);
+	Bmp2Tif(tmpBmpVorName, OutVoronoiTif);
+	Bmp2Tif(tmpBmpDenName, OutDelaunayTif);
 	return 0;
 }
 

@@ -25,5 +25,7 @@ int TifOverlay(const char* InTifName1, const char* InTifName2, const char* OutTi
 int TifReverse(const char* InTifName, const char* OutTifName);
 int getTifBoundary(const char* InTifName, const char* OutTifName);
 int TifDistTrans(const char* InTifName, const char* OutDistTif, const char* OutLocTif, DistanceTemplate* pdisTmp);
+int getTifDelaunay(const char* InTifName, const char* OutLocTif, const char* OutVoronoiTif, const char* OutDelaunayTif, DistanceTemplate* pdisTmp);
+
 #endif // !1
 

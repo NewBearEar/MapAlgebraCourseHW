@@ -1,0 +1,6 @@
+WHU_sighting  --  景点
+WHU_dininghall -- 食堂
+WHU_restaurant -- 餐厅
+WHU_teachbuilding -- 教学楼
+WHU_toilet -- 厕所
+WHU_academy  --  学院
